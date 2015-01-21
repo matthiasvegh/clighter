@@ -1,3 +1,5 @@
+import os
+
 import vim
 import clighter_helper
 import clang_service
@@ -73,8 +75,36 @@ def unregister_buffer(bufname):
     __clang_service.unregister([bufname])
 
 
+def execfile_with_safe_import(filename, locals_for_file={}):
+    import __builtin__
+    from types import ModuleType
+
+    class NonExistantModule(ModuleType):
+        def __getattr__(self, key):
+            return None
+        __all__ = [] # support wildcard imports
+
+    def tryimport(name, globals={}, locals={}, fromlist=[], level=-1):
+        try:
+            return realimport(name, globals, locals, fromlist, level)
+        except ImportError:
+            return NonExistantModule(name)
+
+    realimport, __builtin__.__import__ = __builtin__.__import__, tryimport
+
+    try:
+        execfile(filename, locals_for_file)
+    except:
+        __builtin__.__import__ = realimport
+        raise
+
+
 def clang_start_service():
-    return __clang_service.start(list(vim.vars["ClighterCompileArgs"]))
+    configlocals = {}
+    path_to_ycm_conf = os.path.expanduser('~/.ycm_extra_conf.py')
+    execfile_with_safe_import(path_to_ycm_conf, configlocals)
+    compilation_flags_from_ycm = configlocals['flags']
+    return __clang_service.start(list(vim.vars["ClighterCompileArgs"])+compilation_flags_from_ycm)
 
 
 def clang_stop_service():
