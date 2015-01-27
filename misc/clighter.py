@@ -94,9 +94,9 @@ def execfile_with_safe_import(filename, locals_for_file={}):
 
     try:
         execfile(filename, locals_for_file)
-    except:
+    finally:
         __builtin__.__import__ = realimport
-        raise
+
 
 
 def clang_start_service():
