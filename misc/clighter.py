@@ -98,12 +98,29 @@ def execfile_with_safe_import(filename, locals_for_file={}):
         __builtin__.__import__ = realimport
 
 
+def locateYcmExtraConfig():
+    currentPath = vim.current.buffer.name
+    currentDir = os.path.dirname(currentPath)
+    while currentDir != '/':
+        if '.ycm_extra_conf.py' in os.listdir(currentDir):
+            return os.path.join(currentDir, '.ycm_extra_conf.py')
+        currentDir = os.path.abspath(os.path.join(currentDir, os.pardir))
+    if '.ycm_extra_conf.py' in os.listdir(currentDir):
+        return os.path.join(currentDir, '.ycm_extra_conf.py')
+    else:
+        if os.path.isfile(os.path.expanduser('~/.ycm_extra_conf.py')):
+            return os.path.expanduser('~/.ycm_extra_conf.py')
+        else:
+            return None
 
 def clang_start_service():
     configlocals = {}
-    path_to_ycm_conf = os.path.expanduser('~/.ycm_extra_conf.py')
-    execfile_with_safe_import(path_to_ycm_conf, configlocals)
-    compilation_flags_from_ycm = configlocals['flags']
+    path_to_ycm_conf = locateYcmExtraConfig()
+    if path_to_ycm_conf is not None:
+        execfile_with_safe_import(path_to_ycm_conf, configlocals)
+        compilation_flags_from_ycm = configlocals['flags']
+    else:
+        compilation_flags_from_ycm = []
     return __clang_service.start(list(vim.vars["ClighterCompileArgs"])+compilation_flags_from_ycm)
 
 
